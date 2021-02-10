@@ -1,0 +1,25 @@
+{
+  "name": "webscraper",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^0.21.1",
+    "cheerio": "^1.0.0-rc.5",
+    "ejs-mate": "^3.0.0",
+    "exceljs": "^4.2.0",
+    "express": "^4.17.1",
+    "puppeteer": "^7.0.1",
+    "puppeteer-extra": "^3.1.16",
+    "puppeteer-extra-plugin-adblocker": "^2.11.10",
+    "puppeteer-extra-plugin-stealth": "^2.7.4",
+    "random-useragent": "^0.5.0",
+    "user-agents": "^1.0.559"
+  }
+}
