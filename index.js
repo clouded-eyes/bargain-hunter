@@ -1,8 +1,9 @@
-const { startBrowser, createPage } = require("./watsonsScraper/puppetInit");
+const { startBrowser, createPage } = require("./watsonsScraper/puppeteerInit");
 const {
-  getPageLinks,
-  paginate,
+  getCatData,
+  scrapeCatPages,
   getProductData,
+  filterCat,
 } = require("./watsonsScraper/watsonsScraper");
 const scraperController = require("./watsonsScraper/pageController");
 
@@ -36,12 +37,26 @@ async function getVisual(siteURL, siteName) {
     // Start Browser
     const browser = await startBrowser();
 
-    // Create New Page
+    // Create New Page Stealth Page
     const page = await createPage(browser, siteURL);
 
-    let productCategoryLinks = await getPageLinks(page, "abbott");
+    // Get All Category Data
+    allprodCatData = await getCatData(page);
 
-    console.log(productCategoryLinks);
+    // Filter to Specified Categories into Single Arr with Objs
+    let prodCatData = [];
+    let filteredCatData = prodCatData.concat(
+      await filterCat(allprodCatData, "watsons")
+      // await filterCat(allprodCatData, "hada labo")
+    );
+    console.log(filteredCatData);
+
+    let scrapedCatPageData = await scrapeCatPages(page, filteredCatData);
+    console.log(scrapedCatPageData);
+
+    // Scrapes all filtered Category
+
+    // await scrapeCategoryPages(page, abbottData);
     // let urls = await page.$$eval(".brand", (links) => {
     //   // // Make sure the book to be scraped is in stock
     //   // links = links.filter(
@@ -62,7 +77,7 @@ async function getVisual(siteURL, siteName) {
     // await page.pdf({ path: "page.pdf" });
     // console.log(`Screenshot Made - ${siteName}`);
 
-    // await browser.close();
+    await browser.close();
   } catch (error) {
     console.error(error);
   }
