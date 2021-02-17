@@ -1,4 +1,4 @@
-const jsonToExcel = require("./jsonToExcel");
+const { jsonObjectToExcel, jsonArrayToExcel } = require("./jsonToExcel");
 
 // // Get Product categoryData from Catalogue Page
 // async function getCatData(page, productBrand) {
@@ -54,7 +54,7 @@ async function scrapeCatPages(page, categoryData) {
 
     for (let category of categoryData) {
       await page.goto(category.urlAllProductPage, {
-        waitUntil: "networkidle2",
+        waitUntil: "networkidle0",
         timeout: 0,
       });
       await page.waitForSelector(".product-container");
@@ -63,24 +63,33 @@ async function scrapeCatPages(page, categoryData) {
         ".productContainer",
         (prodCardsData) => {
           prodCardsData = prodCardsData.map((prodCard) => {
+            // Get Attributes to Calculate/Process
             let priceCurrent = prodCard
               .querySelector(".productPrice")
               .childNodes[0].nodeValue.trim();
-            let priceOriginal =
-              prodCard
-                .querySelector(".productPrice")
-                .childNodes[0].nodeValue.trim() || priceCurrent;
-            let discount_pct = 1 - priceCurrent / priceOriginal;
-            let discount_abs = priceOriginal - priceCurrent;
+            let priceOriginal;
+            try {
+              priceOriginal = prodCard.querySelector(
+                ".productPrice > .productOriginalPrice"
+              ).innerText;
+            } catch (error) {
+              priceOriginal = priceCurrent;
+            }
+
+            let discount_pct = 1 - priceCurrent / priceOriginal || 0;
+            let discount_abs = priceOriginal - priceCurrent || 0;
 
             return {
               name: prodCard.querySelector(".productName").innerText,
+              link: prodCard.querySelector(".productName > a").href,
               image: prodCard
                 .querySelector("e2-product-thumbnail > img")
                 .getAttribute("src"),
-              highlight: prodCard.querySelector(".productHighlight").innerText,
+              highlight:
+                prodCard.querySelector(".productHighlight").innerText || null,
               priceCurrent: priceCurrent,
               priceOriginal: priceOriginal || priceCurrent,
+              priceCurrency: "MYR",
               discounted: priceCurrent - priceOriginal == 0 ? true : false,
               discount_pct: discount_pct,
               discount_abs: discount_abs,

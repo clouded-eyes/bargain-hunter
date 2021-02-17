@@ -103,7 +103,7 @@ async function createPage(browser, url) {
       });
     });
 
-    await page.goto(url, { waitUntil: "networkidle2", timeout: 0 });
+    await page.goto(url, { waitUntil: "networkidle0", timeout: 0 });
     console.log("New Page Created......");
     return page;
   } catch (error) {

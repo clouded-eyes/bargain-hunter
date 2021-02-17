@@ -46,8 +46,9 @@ async function getVisual(siteURL, siteName) {
     // Filter to Specified Categories into Single Arr with Objs
     let prodCatData = [];
     let filteredCatData = prodCatData.concat(
-      await filterCat(allprodCatData, "watsons")
-      // await filterCat(allprodCatData, "hada labo")
+      // await filterCat(allprodCatData, "watsons"),
+      // await filterCat(allprodCatData, "hada labo"),
+      await filterCat(allprodCatData, "neutrogena")
     );
     console.log(filteredCatData);
 
