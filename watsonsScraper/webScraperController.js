@@ -1,10 +1,12 @@
-const url = "https://www.watsons.com.my/all-brands/b/155173/daeng-gi-meo-ri";
-const urlExample =
-  "https://www.watsons.com.my/Product-Categories/c/1?q=:productBrandCode:productBrandCode:159126&text=&masterBrandCode=159126&sortCode=bestSeller";
+const { startBrowser, createPage } = require("./puppeteerInit");
+const {
+  getCatData,
+  scrapeCatPages,
+  getProductData,
+  filterCat,
+} = require("./watsonsScraper");
 
-const { startBrowser, createPage } = require("./puppetInit");
-const { getPageLinks, paginate, getProductData } = require("./watsonsScraper");
-const scraperController = require("./pageController");
+const { jsonArrayToExcel } = require("./jsonToExcel");
 
 // Initiate Constants
 const websites = [
@@ -36,34 +38,32 @@ async function getVisual(siteURL, siteName) {
     // Start Browser
     const browser = await startBrowser();
 
-    // Create New Page
+    // Create New Page Stealth Page
     const page = await createPage(browser, siteURL);
 
-    let productCategoryLinks = await getPageLinks(page);
+    // Get All Category Data
+    allprodCatData = await getCatData(page);
 
-    console.log(productCategoryLinks);
-    console.log(productCategoryLinks.length);
-    // let urls = await page.$$eval(".brand", (links) => {
-    //   // // Make sure the book to be scraped is in stock
-    //   // links = links.filter(
-    //   //   (link) =>
-    //   //     link.querySelector(".instock.availability > i").textContent !==
-    //   //     "In stock"
-    //   // );
+    // Filter to Specified Categories into Single Arr with Objs
+    let prodCatData = [];
+    let filteredCatData = prodCatData.concat(
+      await filterCat(allprodCatData, "oxy"),
+      await filterCat(allprodCatData, "hada labo")
+      // await filterCat(allprodCatData, "abbott"),
+      // await filterCat(allprodCatData, "c.code"),
+      // await filterCat(allprodCatData, "l'oreal"),
+      // await filterCat(allprodCatData, "watsons"),
+      // await filterCat(allprodCatData, "neutrogena")
+    );
+    console.log(filteredCatData);
 
-    //   // Extract the links from the data
-    //   links = links.map((el) => el.querySelector("a").href);
-    //   return links;
-    // });
+    let scrapedCatPageData = await scrapeCatPages(page, filteredCatData);
 
-    // await page.screenshot({
-    //   path: `../screenshots/${siteName}.png`,
-    //   fullPage: true,
-    // });
-    // await page.pdf({ path: "page.pdf" });
-    // console.log(`Screenshot Made - ${siteName}`);
+    // Writes into Excel File
+    await jsonArrayToExcel(scrapedCatPageData, "watsons_data_5");
+    console.log(`File is written: ${scrapedCatPageData.length} items scrapped`);
 
-    // await browser.close();
+    await browser.close();
   } catch (error) {
     console.error(error);
   }

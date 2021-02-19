@@ -1,4 +1,4 @@
-const { jsonObjectToExcel, jsonArrayToExcel } = require("./jsonToExcel");
+const { jsonArrayToExcel } = require("./jsonToExcel");
 
 // // Get Product categoryData from Catalogue Page
 // async function getCatData(page, productBrand) {
@@ -15,17 +15,17 @@ async function getCatData(page) {
         // Extract the categoryData from the data
         categoryData = categoryData.map((brand) => {
           // Strips Url to get Brand Codes
-          let brandCode = brand.href.replace(
+          let id = brand.href.replace(
             /https\:\/\/www\.watsons\.com\.my\/all-brands\/b\//,
             ""
           );
-          brandCode = brandCode.replace(/\/.*/g, "");
+          id = id.replace(/\/.*/g, "");
 
           return {
             name: brand.textContent.toLowerCase(),
-            brandCode: brandCode,
+            id: id,
             urlBrandPage: brand.href,
-            urlAllProductPage: `https://www.watsons.com.my/Product-Categories/c/1?q=:productBrandCode:productBrandCode:${brandCode}&text=&masterBrandCode=${brandCode}&sortCode=bestSeller`,
+            urlAllProductPage: `https://www.watsons.com.my/Product-Categories/c/1?q=:productBrandCode:productBrandCode:${id}&text=&masterBrandCode=${id}&sortCode=bestSeller&pageSize=1000`,
           };
         });
         return categoryData;
@@ -64,7 +64,7 @@ async function scrapeCatPages(page, categoryData) {
 
         let prodCatalogueData = await page.$$eval(
           ".productContainer",
-          (prodCardsData) => {
+          (prodCardsData, category) => {
             prodCardsData = prodCardsData.map((prodCard) => {
               // Get Attributes to Calculate/Process
               let priceCurrent = prodCard
@@ -101,10 +101,13 @@ async function scrapeCatPages(page, categoryData) {
                 discounted: priceCurrent - priceOriginal == 0 ? false : true,
                 discount_pct: discount_pct,
                 discount_abs: discount_abs,
+                category_id: category.id,
+                category_name: category.name,
               };
             });
             return prodCardsData;
-          }
+          },
+          category
         );
         return prodCatalogueData;
       }
@@ -113,7 +116,7 @@ async function scrapeCatPages(page, categoryData) {
       let nextPageButtonExists = true;
       let nextPageButtonDisabled = false;
       let currentPageData;
-      let count = 0;
+      let count = 1;
 
       while (nextPageButtonExists && !nextPageButtonDisabled) {
         currentPageData = await scrapeCurrentPage();
@@ -141,28 +144,39 @@ async function scrapeCatPages(page, categoryData) {
         }
 
         if (nextPageButtonExists && !nextPageButtonDisabled) {
-          await page.click("li.page-item > a.page-link > .icon-arrow-right");
-          // await page.waitForTimeout(2000);
+          // await page.click("li.page-item > a.page-link > .icon-arrow-right");
+          // await page.waitForTimeout(3000);
+
+          await page.goto(
+            `${category.urlAllProductPage}&currentPage=${count}`,
+            {
+              waitUntil: "networkidle0",
+              timeout: 0,
+            }
+          );
         }
 
         // nextPageButtonExists = false;
         // nextPageButtonDisabled = true;
         count++;
         console.log(
-          `loop ${count} for ${category.name} - ${currentPageData.length} scrapped`
+          `loop ${count - 1} for ${category.name} - ${
+            currentPageData.length
+          } scrapped`
         );
       }
     }
+    console.log(`Total Items Scrapped: ${scrapedCatPagesData.length}`);
+    await jsonArrayToExcel(scrapedCatPagesData, "watsons_data_5_unfiltered");
 
     // Removes Duplicate Items in scrapedCatPagesData
-    const filteredArr = scrapedCatPagesData.reduce((acc, current) => {
-      const x = acc.find((item) => item.id === current.id);
-      if (!x) {
-        return acc.concat([current]);
-      } else {
-        return acc;
-      }
-    }, []);
+    const seen = new Set();
+
+    const filteredArr = scrapedCatPagesData.filter((el) => {
+      const duplicate = seen.has(el.id);
+      seen.add(el.id);
+      return !duplicate;
+    });
 
     return filteredArr;
   } catch (error) {}

@@ -65,7 +65,7 @@ async function getVisual(siteURL, siteName) {
 
     // Sends to json
 
-    await jsonArrayToExcel(scrapedCatPageData, "watsons_data_2");
+    await jsonArrayToExcel(scrapedCatPageData, "watsons_data_3");
     console.log(`File is written: ${scrapedCatPageData.length} items scrapped`);
     // Scrapes all filtered Category
 
