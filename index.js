@@ -6,6 +6,10 @@ const {
   filterCat,
 } = require("./watsonsScraper/watsonsScraper");
 const scraperController = require("./watsonsScraper/pageController");
+const {
+  jsonObjectToExcel,
+  jsonArrayToExcel,
+} = require("./watsonsScraper/jsonToExcel");
 
 // Initiate Constants
 const websites = [
@@ -46,15 +50,23 @@ async function getVisual(siteURL, siteName) {
     // Filter to Specified Categories into Single Arr with Objs
     let prodCatData = [];
     let filteredCatData = prodCatData.concat(
+      // await filterCat(allprodCatData, "abbott"),
+      // await filterCat(allprodCatData, "c.code"),
+      // await filterCat(allprodCatData, "l'oreal"),
+      await filterCat(allprodCatData, "oxy"),
       // await filterCat(allprodCatData, "watsons"),
-      // await filterCat(allprodCatData, "hada labo"),
-      await filterCat(allprodCatData, "neutrogena")
+      await filterCat(allprodCatData, "hada labo")
+      // await filterCat(allprodCatData, "neutrogena")
     );
     console.log(filteredCatData);
 
     let scrapedCatPageData = await scrapeCatPages(page, filteredCatData);
-    console.log(scrapedCatPageData);
+    // console.log(scrapedCatPageData);
 
+    // Sends to json
+
+    await jsonArrayToExcel(scrapedCatPageData, "watsons_data_2");
+    console.log(`File is written: ${scrapedCatPageData.length} items scrapped`);
     // Scrapes all filtered Category
 
     // await scrapeCategoryPages(page, abbottData);

@@ -96,7 +96,7 @@ async function jsonArrayToExcel(jsonArray, filename) {
   const workbook = new Excel.Workbook();
 
   // Create Worksheet for Book Category
-  const worksheet = workbook.addWorksheet("Book Data");
+  const worksheet = workbook.addWorksheet("Scrapped Data");
 
   // Set Header Column
   const firstItem = jsonArray[0];
@@ -112,7 +112,6 @@ async function jsonArrayToExcel(jsonArray, filename) {
 
   // Writes Workbook
   await workbook.xlsx.writeFile(filename + ".xlsx");
-  console.log("File is written");
 }
 
 module.exports = { jsonObjectToExcel, jsonArrayToExcel };

@@ -35,15 +35,17 @@ async function createPage(browser, url) {
     const UA = userAgent.toString() || USER_AGENT;
     const page = await browser.newPage();
 
-    // // Randomize viewport size
-    // await page.setViewport({
-    //   width: 1920 + Math.floor(Math.random() * 100),
-    //   height: 3000 + Math.floor(Math.random() * 100),
-    //   deviceScaleFactor: 1,
-    //   hasTouch: false,
-    //   isLandscape: false,
-    //   isMobile: false,
-    // });
+    // Randomize viewport size
+    await page.setViewport({
+      // width: 1920 + Math.floor(Math.random() * 100),
+      // height: 3000 + Math.floor(Math.random() * 100),
+      width: 1920,
+      height: 1200,
+      deviceScaleFactor: 1,
+      hasTouch: false,
+      isLandscape: false,
+      isMobile: false,
+    });
 
     await page.setUserAgent(UA);
     await page.setJavaScriptEnabled(true);

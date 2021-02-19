@@ -57,51 +57,114 @@ async function scrapeCatPages(page, categoryData) {
         waitUntil: "networkidle0",
         timeout: 0,
       });
-      await page.waitForSelector(".product-container");
 
-      let prodCatalogueData = await page.$$eval(
-        ".productContainer",
-        (prodCardsData) => {
-          prodCardsData = prodCardsData.map((prodCard) => {
-            // Get Attributes to Calculate/Process
-            let priceCurrent = prodCard
-              .querySelector(".productPrice")
-              .childNodes[0].nodeValue.trim();
-            let priceOriginal;
-            try {
-              priceOriginal = prodCard.querySelector(
-                ".productPrice > .productOriginalPrice"
-              ).innerText;
-            } catch (error) {
-              priceOriginal = priceCurrent;
-            }
+      // Function Scrape Current Page in a Category Catalogue Page
+      async function scrapeCurrentPage() {
+        await page.waitForSelector(".product-container");
 
-            let discount_pct = 1 - priceCurrent / priceOriginal || 0;
-            let discount_abs = priceOriginal - priceCurrent || 0;
+        let prodCatalogueData = await page.$$eval(
+          ".productContainer",
+          (prodCardsData) => {
+            prodCardsData = prodCardsData.map((prodCard) => {
+              // Get Attributes to Calculate/Process
+              let priceCurrent = prodCard
+                .querySelector(".productPrice")
+                .childNodes[0].nodeValue.trim()
+                .replace(/RM/g, "");
+              let priceOriginal;
+              try {
+                priceOriginal = prodCard
+                  .querySelector(".productPrice > .productOriginalPrice")
+                  .innerText.replace(/RM/g, "");
+              } catch (error) {
+                priceOriginal = priceCurrent;
+              }
 
-            return {
-              name: prodCard.querySelector(".productName").innerText,
-              link: prodCard.querySelector(".productName > a").href,
-              image: prodCard
-                .querySelector("e2-product-thumbnail > img")
-                .getAttribute("src"),
-              highlight:
-                prodCard.querySelector(".productHighlight").innerText || null,
-              priceCurrent: priceCurrent,
-              priceOriginal: priceOriginal || priceCurrent,
-              priceCurrency: "MYR",
-              discounted: priceCurrent - priceOriginal == 0 ? true : false,
-              discount_pct: discount_pct,
-              discount_abs: discount_abs,
-            };
-          });
-          return prodCardsData;
+              let discount_pct = 1 - priceCurrent / priceOriginal || 0;
+              let discount_abs = priceOriginal - priceCurrent || 0;
+              let link = prodCard.querySelector(".productName > a").href;
+              let id = link.replace(/.*p\//g, "");
+
+              // Return Objects
+              return {
+                id,
+                name: prodCard.querySelector(".productName").innerText,
+                link,
+                image: prodCard
+                  .querySelector("e2-product-thumbnail > img")
+                  .getAttribute("src"),
+                highlight:
+                  prodCard.querySelector(".productHighlight").innerText || null,
+                priceCurrency: "MYR",
+                priceCurrent: priceCurrent,
+                priceOriginal: priceOriginal || priceCurrent,
+                discounted: priceCurrent - priceOriginal == 0 ? false : true,
+                discount_pct: discount_pct,
+                discount_abs: discount_abs,
+              };
+            });
+            return prodCardsData;
+          }
+        );
+        return prodCatalogueData;
+      }
+
+      // Pagination Logic with Scrape Current Page Function Called
+      let nextPageButtonExists = true;
+      let nextPageButtonDisabled = false;
+      let currentPageData;
+      let count = 0;
+
+      while (nextPageButtonExists && !nextPageButtonDisabled) {
+        currentPageData = await scrapeCurrentPage();
+
+        scrapedCatPagesData = scrapedCatPagesData.concat(currentPageData);
+
+        // Evaluate If Next Page Exists
+        try {
+          nextPageButtonExists = await page.$eval(
+            "li.page-item > a.page-link > .icon-arrow-right",
+            (a) => a
+          );
+          nextPageButtonExists = true;
+        } catch (error) {
+          nextPageButtonExists = false;
         }
-      );
+        try {
+          nextPageButtonDisabled = await page.$eval(
+            "li.page-item.disabled > a.page-link > .icon-arrow-right",
+            (a) => a
+          );
+          nextPageButtonDisabled = true;
+        } catch (error) {
+          nextPageButtonDisabled = false;
+        }
 
-      scrapedCatPagesData = scrapedCatPagesData.concat(prodCatalogueData);
+        if (nextPageButtonExists && !nextPageButtonDisabled) {
+          await page.click("li.page-item > a.page-link > .icon-arrow-right");
+          // await page.waitForTimeout(2000);
+        }
+
+        // nextPageButtonExists = false;
+        // nextPageButtonDisabled = true;
+        count++;
+        console.log(
+          `loop ${count} for ${category.name} - ${currentPageData.length} scrapped`
+        );
+      }
     }
-    return scrapedCatPagesData;
+
+    // Removes Duplicate Items in scrapedCatPagesData
+    const filteredArr = scrapedCatPagesData.reduce((acc, current) => {
+      const x = acc.find((item) => item.id === current.id);
+      if (!x) {
+        return acc.concat([current]);
+      } else {
+        return acc;
+      }
+    }, []);
+
+    return filteredArr;
   } catch (error) {}
   console.log(`scrapeCatPages Error: ${error}`);
 }
