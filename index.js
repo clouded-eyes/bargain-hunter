@@ -1,103 +1,144 @@
-const { startBrowser, createPage } = require("./watsonsScraper/puppeteerInit");
-const {
-  getCatData,
-  scrapeCatPages,
-  getProductData,
-  filterCat,
-} = require("./watsonsScraper/watsonsScraper");
-const scraperController = require("./watsonsScraper/pageController");
-const {
-  jsonObjectToExcel,
-  jsonArrayToExcel,
-} = require("./watsonsScraper/jsonToExcel");
-
-// Initiate Constants
-const websites = [
-  { name: "watsons", url: "https://www.watsons.com.my/b/brandlist" },
-  //   { name: "guardian", url: "https://guardian.com.my/index.php/pbrand.html" },
-  //   { name: "zalora", url: "https://www.zalora.com.my/" },
-  //   { name: "jdsports", url: "https://www.jdsports.my/" },
-  //   { name: "shopee", url: "https://shopee.com.my/" },
-  //   { name: "lazada", url: "https://www.lazada.com.my/" },
-  //   { name: "hermo", url: "https://www.hermo.my/" },
-  //   { name: "nike", url: "https://www.nike.com/my/" },
-  //   { name: "addidas", url: "https://www.adidas.com.my/en" },
-  //   { name: "sportsdirect", url: "https://my.sportsdirect.com/" },
-  //   { name: "decathlon", url: "https://www.decathlon.my/" },
-  //   {
-  //     name: "propertyGuru",
-  //     url:
-  //       "https://www.propertyguru.com.my/property-for-sale?freetext=seapark&_freetextDisplay=seapark&sort=price&order=asc",
-  //   },
-  //   { name: "booksToScrape", url: "http://books.toscrape.com" },
-];
-
-for (const site of websites) {
-  getVisual(site.url, site.name);
+if (process.env.NODE_ENV !== "production") {
+  require("dotenv").config();
 }
+console.log(process.env.NODE_ENV);
 
-async function getVisual(siteURL, siteName) {
-  try {
-    // Start Browser
-    const browser = await startBrowser();
+// Loading Packages & Modules
+const express = require("express");
+const path = require("path");
+const mongoose = require("mongoose");
+const ejsMate = require("ejs-mate");
 
-    // Create New Page Stealth Page
-    const page = await createPage(browser, siteURL);
+// Sessions & Authentication
+const session = require("express-session");
+const passport = require("passport");
+const LocalStrategy = require("passport-local");
+const passportLocalMongoose = require("passport-local-mongoose");
+const User = require("./models/user");
 
-    // Get All Category Data
-    allprodCatData = await getCatData(page);
+const MongoDBStore = require("connect-mongo")(session);
+const flash = require("connect-flash");
+const mongoSanitize = require("express-mongo-sanitize");
 
-    // Filter to Specified Categories into Single Arr with Objs
-    let prodCatData = [];
-    let filteredCatData = prodCatData.concat(
-      // await filterCat(allprodCatData, "abbott"),
-      // await filterCat(allprodCatData, "c.code"),
-      // await filterCat(allprodCatData, "l'oreal"),
-      await filterCat(allprodCatData, "oxy"),
-      // await filterCat(allprodCatData, "watsons"),
-      await filterCat(allprodCatData, "hada labo")
-      // await filterCat(allprodCatData, "neutrogena")
-    );
-    console.log(filteredCatData);
+const methodOverride = require("method-override");
+// Own Code
+const ExpressError = require("./utilities/ExpressError");
 
-    let scrapedCatPageData = await scrapeCatPages(page, filteredCatData);
-    // console.log(scrapedCatPageData);
+// Connecting to Mongo DB
+// const dbUrl = "mongodb://localhost:27017/yelp-camp";
+const dbUrl = process.env.DB_URL || "mongodb://localhost:27017/bargain-hunter";
+mongoose.connect(dbUrl, {
+  useNewUrlParser: true,
+  useCreateIndex: true,
+  useUnifiedTopology: true,
+  useFindAndModify: false,
+});
 
-    // Sends to json
+const db = mongoose.connection;
+db.on("error", console.error.bind(console, "connection error:"));
+db.once("open", () => {
+  console.log("[00] MONGO DB CONNECTED");
+});
 
-    await jsonArrayToExcel(scrapedCatPageData, "watsons_data_3");
-    console.log(`File is written: ${scrapedCatPageData.length} items scrapped`);
-    // Scrapes all filtered Category
+////////////////////////////////
+//////////// EXPRESS ///////////
+////////////////////////////////
+// Initialize Express
+const app = express();
+// EJS Mate for Partials
+app.engine("ejs", ejsMate);
+// EJS For Rendering
+app.set("view engine", "ejs");
+// Where all the views are
+app.set("views", path.join(__dirname, "views"));
 
-    // await scrapeCategoryPages(page, abbottData);
-    // let urls = await page.$$eval(".brand", (links) => {
-    //   // // Make sure the book to be scraped is in stock
-    //   // links = links.filter(
-    //   //   (link) =>
-    //   //     link.querySelector(".instock.availability > i").textContent !==
-    //   //     "In stock"
-    //   // );
+//////////////////////////////////
+/////////// MIDDLEWARES //////////
+//////////////////////////////////
+app.use(express.urlencoded({ extended: true }));
+app.use(methodOverride("_method"));
+app.use(express.static(path.join(__dirname, "public")));
+app.use(mongoSanitize());
+app.use(flash());
 
-    //   // Extract the links from the data
-    //   links = links.map((el) => el.querySelector("a").href);
-    //   return links;
-    // });
+const secret = process.env.SECRET || "thisshouldbebettersecret";
+const store = new MongoDBStore({
+  url: dbUrl,
+  secret,
+  // secret: secret,
+  touchAfter: 60 * 60 * 24,
+});
 
-    // await page.screenshot({
-    //   path: `../screenshots/${siteName}.png`,
-    //   fullPage: true,
-    // });
-    // await page.pdf({ path: "page.pdf" });
-    // console.log(`Screenshot Made - ${siteName}`);
+store.on("error", function (err) {
+  console.log("SESSION STORE ERROR:", err);
+});
 
-    await browser.close();
-  } catch (error) {
-    console.error(error);
-  }
-}
+const sessionConfig = {
+  store,
+  name: "session",
+  secret: secret,
+  resave: false,
+  saveUninitialized: true,
+  cookie: {
+    httpOnly: true,
+    // secure: true,
+    expires: Date.now() + 100 * 60 * 60 * 24 * 7,
+    maxAge: Date.now() + 100 * 60 * 60 * 24 * 7,
+  },
+};
 
-// //Start the browser and create a browser instance
-// let browserInstance = startBrowser();
+// Passport Middleware
+app.use(passport.initialize());
+app.use(passport.session());
+passport.use(new LocalStrategy(User.authenticate()));
 
-// // Pass the browser instance to the scraper controller
-// scraperController(browserInstance);
+passport.serializeUser(User.serializeUser());
+passport.deserializeUser(User.deserializeUser());
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+app.use(session(sessionConfig));
+app.use(flash());
+
+// Local Variables
+app.use((req, res, next) => {
+  res.locals.currentUser = req.user;
+  res.locals.success = req.flash("success");
+  res.locals.error = req.flash("error");
+  next();
+});
+
+//////////////////////////////////
+/////////// THE ROUTES ///////////
+//////////////////////////////////
+
+// HOME ROUTES
+
+app.get("/", (req, res) => {
+  res.render("home");
+});
+
+app.get("/register", (req, res) => {
+  res.render("users/register");
+});
+
+app.get("/login", (req, res) => {
+  res.render("users/login");
+});
+
+// // CAMPGROUND ROUTES
+// app.use("/", userRoutes);
+// app.use("/campgrounds", campgroundRoutes);
+// app.use("/campgrounds/:id/reviews", reviewRoutes);
+
+//404 ROUTING
+app.all("*", (req, res, next) => {
+  next(new ExpressError("Page Not Found", 404));
+});
+
+//OPEN PORT
+const port = process.env.PORT || 3000;
+app.listen(port, () => {
+  console.log(`[00] EXPRESS LISTING ON PORT ${port}`);
+});

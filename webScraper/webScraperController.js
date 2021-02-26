@@ -48,12 +48,12 @@ async function getVisual(siteURL, siteName) {
     let prodCatData = [];
     let filteredCatData = prodCatData.concat(
       await filterCat(allprodCatData, "oxy"),
-      await filterCat(allprodCatData, "hada labo")
-      // await filterCat(allprodCatData, "abbott"),
-      // await filterCat(allprodCatData, "c.code"),
-      // await filterCat(allprodCatData, "l'oreal"),
-      // await filterCat(allprodCatData, "watsons"),
-      // await filterCat(allprodCatData, "neutrogena")
+      await filterCat(allprodCatData, "hada labo"),
+      await filterCat(allprodCatData, "abbott"),
+      await filterCat(allprodCatData, "c.code"),
+      await filterCat(allprodCatData, "l'oreal"),
+      await filterCat(allprodCatData, "watsons"),
+      await filterCat(allprodCatData, "neutrogena")
     );
     console.log(filteredCatData);
 

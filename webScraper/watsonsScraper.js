@@ -167,7 +167,6 @@ async function scrapeCatPages(page, categoryData) {
       }
     }
     console.log(`Total Items Scrapped: ${scrapedCatPagesData.length}`);
-    await jsonArrayToExcel(scrapedCatPagesData, "watsons_data_5_unfiltered");
 
     // Removes Duplicate Items in scrapedCatPagesData
     const seen = new Set();
