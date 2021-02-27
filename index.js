@@ -1,7 +1,6 @@
 if (process.env.NODE_ENV !== "production") {
   require("dotenv").config();
 }
-console.log(process.env.NODE_ENV);
 
 // Loading Packages & Modules
 const express = require("express");
@@ -16,6 +15,7 @@ const LocalStrategy = require("passport-local");
 const passportLocalMongoose = require("passport-local-mongoose");
 const User = require("./models/user");
 
+// Mongo
 const MongoDBStore = require("connect-mongo")(session);
 const flash = require("connect-flash");
 const mongoSanitize = require("express-mongo-sanitize");
@@ -87,6 +87,9 @@ const sessionConfig = {
   },
 };
 
+app.use(session(sessionConfig));
+app.use(flash());
+
 // Passport Middleware
 app.use(passport.initialize());
 app.use(passport.session());
@@ -94,12 +97,6 @@ passport.use(new LocalStrategy(User.authenticate()));
 
 passport.serializeUser(User.serializeUser());
 passport.deserializeUser(User.deserializeUser());
-
-app.use(passport.initialize());
-app.use(passport.session());
-
-app.use(session(sessionConfig));
-app.use(flash());
 
 // Local Variables
 app.use((req, res, next) => {
@@ -113,18 +110,21 @@ app.use((req, res, next) => {
 /////////// THE ROUTES ///////////
 //////////////////////////////////
 
-// HOME ROUTES
+// ROUTE REQS
+const userRoutes = require("./routes/users");
 
+// HOME ROUTE
 app.get("/", (req, res) => {
   res.render("home");
 });
 
-app.get("/register", (req, res) => {
-  res.render("users/register");
-});
+// OTHER ROUTES
+app.use("/", userRoutes);
+// app.use("/campgrounds", campgroundRoutes);
+// app.use("/campgrounds/:id/reviews", reviewRoutes);
 
-app.get("/login", (req, res) => {
-  res.render("users/login");
+app.get("/products", (req, res) => {
+  res.render("products/index");
 });
 
 // // CAMPGROUND ROUTES
